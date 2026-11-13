@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Projetos Especiais • Gestão & Execução</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PapaParse para leitura precisa de CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!-- Chart.js para gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f5f9;
+      color: #1e293b;
+    }
+    .card-shadow {
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="p-4 md:p-6 max-w-[1600px] mx-auto">
+
+  <!-- HEADER -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="bg-indigo-600 text-white p-1.5 rounded-lg">
+          <i data-lucide="layers" class="w-5 h-5"></i>
+        </span>
+        <h1 class="text-xl md:text-2xl font-extrabold text-slate-800 tracking-tight">PORTAL DE PROJETOS ESPECIAIS</h1>
+      </div>
+      <p class="text-xs text-slate-500 mt-1">Monitoramento operacional, programação de campo e escalonamento em tempo real</p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span id="last-sync" class="text-xs text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+        Sincronizando...
+      </span>
+      <button onclick="loadData(true)" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition cursor-pointer">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Atualizar Base
+      </button>
+    </div>
+  </div>
+
+  <!-- 1. CARDS TOTALIZADORES (KPIs - Padrão Imagem 1) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+    <!-- Total O.S / Registros -->
+    <div class="bg-white rounded-xl p-4 border border-slate-200/80 card-shadow relative overflow-hidden">
+      <div class="flex justify-between items-start">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">TOTAL DEMANDAS</span>
+        <i data-lucide="zap" class="w-4 h-4 text-slate-400"></i>
+      </div>
+      <div class="flex items-baseline justify-between mt-3">
+        <span id="kpi-total" class="text-3xl font-extrabold text-slate-800">0</span>
+        <span class="text-[11px] font-semibold bg-rose-50 text-rose-600 px-2 py-0.5 rounded-md border border-rose-100">Base Geral</span>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-2">Registros filtrados na planilha</p>
+    </div>
+
+    <!-- Reprogramadas / Escalonadas -->
+    <div class="bg-white rounded-xl p-4 border-2 border-rose-200 card-shadow relative overflow-hidden bg-gradient-to-br from-white to-rose-50/40">
+      <div class="flex justify-between items-start">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-rose-600">REPROGRAMADAS</span>
+        <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+      </div>
+      <div class="flex items-baseline justify-between mt-3">
+        <span id="kpi-reprog" class="text-3xl font-extrabold text-rose-600">0</span>
+        <span id="kpi-reprog-pct" class="text-[11px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-md">0%</span>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">Com alteração de data</p>
+    </div>
+
+    <!-- Em Andamento / Programadas -->
+    <div class="bg-white rounded-xl p-4 border border-slate-200/80 card-shadow">
+      <div class="flex justify-between items-start">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">EM ANDAMENTO</span>
+        <i data-lucide="clock" class="w-4 h-4 text-amber-500"></i>
+      </div>
+      <div class="flex items-baseline justify-between mt-3">
+        <span id="kpi-andamento" class="text-3xl font-extrabold text-amber-600">0</span>
+        <span id="kpi-andamento-pct" class="text-[11px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md border border-amber-200">0%</span>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-2">Em campo ou programadas</p>
+    </div>
+
+    <!-- Concluídas -->
+    <div class="bg-white rounded-xl p-4 border border-slate-200/80 card-shadow">
+      <div class="flex justify-between items-start">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">CONCLUÍDAS</span>
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+      </div>
+      <div class="flex items-baseline justify-between mt-3">
+        <span id="kpi-concluidas" class="text-3xl font-extrabold text-emerald-600">0</span>
+        <span id="kpi-concluidas-pct" class="text-[11px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-200">0%</span>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-2">Execução finalizada</p>
+    </div>
+
+    <!-- Em Aprovação / Análise -->
+    <div class="bg-white rounded-xl p-4 border border-slate-200/80 card-shadow">
+      <div class="flex justify-between items-start">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">APROVAÇÃO / ANÁLISE</span>
+        <i data-lucide="file-search" class="w-4 h-4 text-blue-500"></i>
+      </div>
+      <div class="flex items-baseline justify-between mt-3">
+        <span id="kpi-aprovacao" class="text-3xl font-extrabold text-blue-600">0</span>
+        <span id="kpi-canceladas" class="text-[11px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">0 canc.</span>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-2">Aguardando liberação / SC / PC</p>
+    </div>
+
+    <!-- Valor Materiais Externos -->
+    <div class="bg-white rounded-xl p-4 border border-slate-200/80 card-shadow">
+      <div class="flex justify-between items-start">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">MATERIAIS EXTERNOS</span>
+        <i data-lucide="dollar-sign" class="w-4 h-4 text-indigo-500"></i>
+      </div>
+      <div class="flex items-baseline justify-between mt-3">
+        <span id="kpi-valor" class="text-xl xl:text-2xl font-extrabold text-indigo-600">R$ 0</span>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-2">Investimento total filtrado</p>
+    </div>
+  </div>
+
+  <!-- 2. BARRA DE FILTROS (Projeto, Status Execução, Regional, Escalonamento + Busca) -->
+  <div class="bg-white rounded-xl p-4 border border-slate-200/80 card-shadow mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">PROJETO</label>
+        <select id="filter-projeto" onchange="applyFilters()" class="w-full text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+          <option value="">Todos os Projetos</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">STATUS EXECUÇÃO</label>
+        <select id="filter-status" onchange="applyFilters()" class="w-full text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+          <option value="">Todos os Status</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">REGIONAL</label>
+        <select id="filter-regional" onchange="applyFilters()" class="w-full text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+          <option value="">Todas as Regionais</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">ESCALONAMENTO</label>
+        <select id="filter-escalonamento" onchange="applyFilters()" class="w-full text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+          <option value="">Todos os Níveis</option>
+          <option value="Coordenador">Coordenador (1ª Reprog.)</option>
+          <option value="Gerente">Gerente (2ª Reprog.)</option>
+          <option value="Gerente Divisão">Gerente Divisão (3ª+ Reprog.)</option>
+          <option value="SEM_ESCALONAMENTO">Sem Escalonamento</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">BUSCA SITE / O.S. / SGM</label>
+        <div class="relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+          <input type="text" id="filter-search" onkeyup="applyFilters()" placeholder="Site, OS, SGM..." class="w-full text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-2 focus:outline-none focus:border-indigo-500">
+        </div>
+      </div>
+
+      <div>
+        <button onclick="resetFilters()" class="w-full flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-3 rounded-lg border border-slate-200 transition cursor-pointer">
+          <i data-lucide="filter-x" class="w-3.5 h-3.5"></i> Limpar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. GRÁFICOS ANALÍTICOS (Padrão Imagem 1 e 2) -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+    <!-- Gráfico 1: Demandas por Regional -->
+    <div class="bg-white rounded-xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-2">
+          <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-600"></i>
+          <h2 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">DEMANDAS POR REGIONAL</h2>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-0.5">Ordenado por volume • Destaque maior demanda</p>
+      </div>
+      <div class="h-56 mt-4 relative">
+        <canvas id="chartRegional"></canvas>
+      </div>
+      <p class="text-[11px] text-center text-slate-400 mt-3 pt-2 border-t border-slate-100">Distribuição operacional por Regional</p>
+    </div>
+
+    <!-- Gráfico 2: Status de Execução -->
+    <div class="bg-white rounded-xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-2">
+          <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-600"></i>
+          <h2 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">STATUS DE EXECUÇÃO</h2>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-0.5">Concluída, Em andamento, Aprovação e Análise</p>
+      </div>
+      <div class="h-56 mt-4 relative flex items-center justify-center">
+        <canvas id="chartStatus"></canvas>
+      </div>
+      <p class="text-[11px] text-center text-slate-400 mt-3 pt-2 border-t border-slate-100">Distribuição percentual e absoluta</p>
+    </div>
+
+    <!-- Gráfico 3: Volume por Projeto -->
+    <div class="bg-white rounded-xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-2">
+          <i data-lucide="folder-kanban" class="w-4 h-4 text-indigo-600"></i>
+          <h2 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">VOLUME POR PROJETO ESPECIAL</h2>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-0.5">Ordenado por volume • Projetos ativos</p>
+      </div>
+      <div class="h-56 mt-4 relative">
+        <canvas id="chartProjeto"></canvas>
+      </div>
+      <p class="text-[11px] text-center text-slate-400 mt-3 pt-2 border-t border-slate-100">Controle de frentes de trabalho</p>
+    </div>
+  </div>
+
+  <!-- Gráfico Linha/Barra: Criação x Programação Execução (Padrão Imagem 2) -->
+  <div class="bg-white rounded-xl p-5 border border-slate-200/80 card-shadow mb-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+      <div>
+        <h2 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">CRONOGRAMA: CRIAÇÃO DE DEMANDAS X DATA DE EXECUÇÃO PROGRAMADA</h2>
+        <p class="text-[11px] text-slate-400 mt-0.5">Acompanhamento temporal das OS abertas e datas agendadas</p>
+      </div>
+    </div>
+    <div class="h-60 relative">
+      <canvas id="chartTimeline"></canvas>
+    </div>
+  </div>
+
+  <!-- 4. BASE DE DETALHAMENTO (Padrão Imagem 3 com botão Ação da Imagem 5) -->
+  <div class="bg-white rounded-xl border border-slate-200/80 card-shadow overflow-hidden">
+    <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      <div>
+        <div class="flex items-center gap-2">
+          <i data-lucide="table-properties" class="w-4 h-4 text-indigo-600"></i>
+          <h2 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">BASE DETALHADA DE PROJETOS ESPECIAIS (GOOGLE SHEETS)</h2>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-0.5">Sincronizado com a planilha Google • Clique em <strong>Ação</strong> para visualizar detalhes completos ou editar na base</p>
+      </div>
+      <span id="table-count" class="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+        Exibindo 0 registros
+      </span>
+    </div>
+
+    <div class="overflow-x-auto max-h-[600px]">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-slate-800 text-white sticky top-0 z-10">
+          <tr>
+            <th class="py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider">PROJETO / CRIAÇÃO</th>
+            <th class="py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider">REGIONAL</th>
+            <th class="py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider">SITE / O.S. / SGM</th>
+            <th class="py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider">DATA EXECUÇÃO</th>
+            <th class="py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider">STATUS EXECUÇÃO</th>
+            <th class="py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider">SUPRIMENTOS (SC/PC)</th>
+            <th class="py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider">REPROG. / ESCALONAMENTO</th>
+            <th class="py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-center">AÇÃO</th>
+          </tr>
+        </thead>
+        <tbody id="table-body" class="divide-y divide-slate-100 text-xs">
+          <!-- Linhas preenchidas via JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 5. MODAL DE VISUALIZAÇÃO COMPLETA E EDIÇÃO NA PLANILHA (Padrão Imagem 4) -->
+  <div id="detailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden border border-slate-200 my-8">
+      
+      <!-- Modal Header Escuro (Imagem 4) -->
+      <div class="bg-[#111827] text-white px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="bg-indigo-600/30 border border-indigo-500/40 p-2 rounded-lg text-indigo-400">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 id="modal-title" class="text-base font-bold tracking-tight">PROJETO - SITE</h3>
+            <p id="modal-subtitle" class="text-xs text-slate-400">O.S. PRISMA: - • SGM: -</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg transition cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+        
+        <!-- Bloco 1: Metadados Fixos da OS -->
+        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <span class="block text-[10px] font-bold uppercase text-slate-400">DATA CRIAÇÃO</span>
+            <span id="m-data-criacao" class="text-xs font-bold text-slate-800 mt-0.5 block">-</span>
+          </div>
+          <div>
+            <span class="block text-[10px] font-bold uppercase text-slate-400">REGIONAL / U.N.</span>
+            <span id="m-regional" class="text-xs font-bold text-slate-800 mt-0.5 block">-</span>
+          </div>
+          <div>
+            <span class="block text-[10px] font-bold uppercase text-slate-400">ESTADO OS PRISMA</span>
+            <span id="m-estado-os" class="text-xs font-bold text-slate-800 mt-0.5 block">-</span>
+          </div>
+          <div>
+            <span class="block text-[10px] font-bold uppercase text-slate-400">MAT. EXTERNOS</span>
+            <span id="m-valor" class="text-xs font-bold text-indigo-600 mt-0.5 block">-</span>
+          </div>
+          <div class="col-span-2 sm:col-span-4 pt-2 border-t border-slate-200/60">
+            <span class="block text-[10px] font-bold uppercase text-slate-400">DESCRIÇÃO DA O.S.</span>
+            <span id="m-descricao" class="text-xs text-slate-700 mt-0.5 block">-</span>
+          </div>
+        </div>
+
+        <!-- Bloco 2: Painel de Reprogramação & Escalonamento -->
+        <div class="bg-white rounded-xl p-4 border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
+              <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <span class="text-xs font-bold text-slate-800 block">Status de Reprogramação & Escalonamento</span>
+              <span class="text-[11px] text-slate-500">Alterar uma Data de Execução já existente soma <strong>+1</strong> e escala o nível.</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="m-badge-reprog" class="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700">0 Reprog.</span>
+            <span id="m-badge-escalonamento" class="px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">Normal</span>
+          </div>
+        </div>
+
+        <!-- Bloco 3: Formulário de Edição Direta na Planilha Google -->
+        <form id="editForm" onsubmit="saveToGoogleSheets(event)" class="bg-white rounded-xl p-4 border border-indigo-100 space-y-4">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <i data-lucide="edit-3" class="w-4 h-4 text-indigo-600"></i>
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">ATUALIZAÇÃO DIRETA NA PLANILHA GOOGLE</h4>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Data Execução -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Data Execução</label>
+              <input type="text" id="edit-data-execucao" placeholder="Ex: 25/11/2026 08:00" class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-600">
+              <span class="text-[10px] text-slate-400">Formato: DD/MM/AAAA HH:MM</span>
+            </div>
+
+            <!-- Status Execução -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Status Execução</label>
+              <select id="edit-status-execucao" class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-indigo-600">
+                <option value="">Selecione...</option>
+                <option value="Em Análise">Em Análise</option>
+                <option value="Em Aprovação">Em Aprovação</option>
+                <option value="Programada">Programada</option>
+                <option value="Em andamento">Em andamento</option>
+                <option value="Concluída">Concluída</option>
+                <option value="Cancelada">Cancelada</option>
+              </select>
+            </div>
+
+            <!-- SGM -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">SGM</label>
+              <input type="text" id="edit-sgm" class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-600">
+            </div>
+
+            <!-- SC & PC -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">SC</label>
+                <input type="text" id="edit-sc" class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-600">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">PC</label>
+                <input type="text" id="edit-pc" class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-600">
+              </div>
+            </div>
+          </div>
+
+          <!-- Observação Reprogramação -->
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">Observação Reprogramação</label>
+            <textarea id="edit-obs-reprog" rows="2" placeholder="Motivo da reprogramação (chuva, falta de acesso, material...)" class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-600"></textarea>
+          </div>
+
+          <!-- Observação Geral -->
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">Observação Geral</label>
+            <textarea id="edit-obs-geral" rows="2" placeholder="Anotações gerais sobre o andamento do projeto..." class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-600"></textarea>
+          </div>
+
+          <!-- Feedback de Salvamento -->
+          <div id="save-feedback" class="hidden text-xs font-semibold p-3 rounded-lg"></div>
+
+          <!-- Footer Botões -->
+          <div class="flex justify-end items-center gap-3 pt-3 border-t border-slate-100">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer">
+              Fechar
+            </button>
+            <button type="submit" id="btn-save" class="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-bold bg-[#6b00b6] hover:bg-[#550091] text-white shadow-sm transition cursor-pointer">
+              <i data-lucide="save" class="w-3.5 h-3.5"></i> Salvar na Planilha Google
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // CONFIGURAÇÕES DE CONEXÃO
+    // =========================================================================
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZpB-IFO9NGB82VC7-Uql8LQxrgP8P5tM0AmICD10xVw98-PYxBCs5ud79XX-lQR9o-52dELFjsHIf/pub?gid=0&single=true&output=csv";
+    
+    // COLE AQUI A URL DO SEU GOOGLE APPS SCRIPT (/exec) GERADA NA PARTE 1:
+    const APPS_SCRIPT_URL = "COLE_SUA_URL_DO_APPS_SCRIPT_AQUI";
+
+    let rawData = [];
+    let filteredData = [];
+    let currentEditingItem = null;
+    let charts = {};
+
+    // =========================================================================
+    // CARREGAMENTO E PARSE DO CSV
+    // =========================================================================
+    function loadData(forceBust = false) {
+      const url = forceBust ? `${CSV_URL}&t=${Date.now()}` : CSV_URL;
+      document.getElementById("last-sync").innerText = "Atualizando...";
+
+      Papa.parse(url, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          // Limpa espaços invisíveis (como zero-width space \u200B presente em alguns PCs)
+          rawData = results.data.map((row, idx) => {
+            const clean = { _id: idx };
+            Object.keys(row).forEach(k => {
+              const cleanKey = k.trim();
+              const cleanVal = (row[k] || "").toString().replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+              clean[cleanKey] = cleanVal;
+            });
+            // Limpa hífen inicial caso exista (ex: "- Disjuntor Inteligente")
+            if (clean["Projeto"]) {
+              clean["Projeto"] = clean["Projeto"].replace(/^-\s*/, "");
+            }
+            return clean;
+          }).filter(r => r["Projeto"] !== "");
+
+          populateFilterOptions();
+          applyFilters();
+          const now = new Date();
+          document.getElementById("last-sync").innerText = `Atualizado às ${now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`;
+        },
+        error: function(err) {
+          console.error("Erro ao carregar CSV:", err);
+          document.getElementById("last-sync").innerText = "Erro na sincronização";
+        }
+      });
+    }
+
+    // =========================================================================
+    // FILTROS
+    // =========================================================================
+    function populateFilterOptions() {
+      const projetos = [...new Set(rawData.map(r => r["Projeto"]).filter(Boolean))].sort();
+      const statusList = [...new Set(rawData.map(r => r["Status Execução"]).filter(Boolean))].sort();
+      const regionais = [...new Set(rawData.map(r => r["Regional"]).filter(Boolean))].sort();
+
+      fillSelect("filter-projeto", projetos, "Todos os Projetos");
+      fillSelect("filter-status", statusList, "Todos os Status");
+      fillSelect("filter-regional", regionais, "Todas as Regionais");
+    }
+
+    function fillSelect(id, items, defaultLabel) {
+      const select = document.getElementById(id);
+      const currentVal = select.value;
+      select.innerHTML = `<option value="">${defaultLabel}</option>`;
+      items.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.textContent = item;
+        select.appendChild(opt);
+      });
+      select.value = currentVal;
+    }
+
+    function applyFilters() {
+      const fProj = document.getElementById("filter-projeto").value;
+      const fStat = document.getElementById("filter-status").value;
+      const fReg  = document.getElementById("filter-regional").value;
+      const fEsc  = document.getElementById("filter-escalonamento").value;
+      const fSearch = document.getElementById("filter-search").value.toLowerCase().trim();
+
+      filteredData = rawData.filter(row => {
+        if (fProj && row["Projeto"] !== fProj) return false;
+        if (fStat && row["Status Execução"] !== fStat) return false;
+        if (fReg && row["Regional"] !== fReg) return false;
+
+        const esc = getEscalonamentoLabel(row);
+        if (fEsc === "SEM_ESCALONAMENTO" && esc !== "Normal") return false;
+        if (fEsc && fEsc !== "SEM_ESCALONAMENTO" && esc !== fEsc) return false;
+
+        if (fSearch) {
+          const hay = `${row["Site"]} ${row["Número OS"]} ${row["SGM"]} ${row["Projeto"]} ${row["Descrição OS"]}`.toLowerCase();
+          if (!hay.includes(fSearch)) return false;
+        }
+        return true;
+      });
+
+      updateKPIs();
+      updateCharts();
+      renderTable();
+    }
+
+    function resetFilters() {
+      document.getElementById("filter-projeto").value = "";
+      document.getElementById("filter-status").value = "";
+      document.getElementById("filter-regional").value = "";
+      document.getElementById("filter-escalonamento").value = "";
+      document.getElementById("filter-search").value = "";
+      applyFilters();
+    }
+
+    // =========================================================================
+    // REGRAS DE NEGÓCIO (ESCALONAMENTO & VALORES)
+    // =========================================================================
+    function getEscalonamentoLabel(row) {
+      const count = parseInt(row["Reprogramação"]) || 0;
+      if (row["Escalonamento"]) return row["Escalonamento"];
+      if (count === 1) return "Coordenador";
+      if (count === 2) return "Gerente";
+      if (count >= 3) return "Gerente Divisão";
+      return "Normal";
+    }
+
+    function parseCurrency(valStr) {
+      if (!valStr) return 0;
+      const cleaned = valStr.replace(/[R$\s.]/g, "").replace(",", ".");
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? 0 : num;
+    }
+
+    // =========================================================================
+    // ATUALIZAÇÃO DOS KPIS (TOTALIZADORES)
+    // =========================================================================
+    function updateKPIs() {
+      const total = filteredData.length;
+      let reprog = 0;
+      let andamento = 0;
+      let concluidas = 0;
+      let aprovacao = 0;
+      let canceladas = 0;
+      let valorTotal = 0;
+
+      filteredData.forEach(r => {
+        const repCount = parseInt(r["Reprogramação"]) || 0;
+        if (repCount > 0 || (r["Escalonamento"] && r["Escalonamento"] !== "Normal")) reprog++;
+
+        const st = (r["Status Execução"] || "").toLowerCase();
+        if (st.includes("conclu")) concluidas++;
+        else if (st.includes("andamento") || st.includes("programad")) andamento++;
+        else if (st.includes("cancelad")) canceladas++;
+        else aprovacao++; // Em Aprovação, Em Análise, etc.
+
+        valorTotal += parseCurrency(r["Valor Materiais Externos"]);
+      });
+
+      const pct = (v) => total > 0 ? ((v / total) * 100).toFixed(1) + "%" : "0%";
+
+      document.getElementById("kpi-total").innerText = total;
+      document.getElementById("kpi-reprog").innerText = reprog;
+      document.getElementById("kpi-reprog-pct").innerText = pct(reprog);
+      document.getElementById("kpi-andamento").innerText = andamento;
+      document.getElementById("kpi-andamento-pct").innerText = pct(andamento);
+      document.getElementById("kpi-concluidas").innerText = concluidas;
+      document.getElementById("kpi-concluidas-pct").innerText = pct(concluidas);
+      document.getElementById("kpi-aprovacao").innerText = aprovacao;
+      document.getElementById("kpi-canceladas").innerText = `${canceladas} canc.`;
+      document.getElementById("kpi-valor").innerText = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+    }
+
+    // =========================================================================
+    // GRÁFICOS (CHART.JS)
+    // =========================================================================
+    function updateCharts() {
+      // 1. Por Regional
+      const regMap = {};
+      filteredData.forEach(r => {
+        const reg = r["Regional"] || "N/I";
+        regMap[reg] = (regMap[reg] || 0) + 1;
+      });
+      const regSorted = Object.entries(regMap).sort((a, b) => b[1] - a[1]);
+      const regLabels = regSorted.map(i => i[0]);
+      const regVals = regSorted.map(i => i[1]);
+      const regColors = regVals.map((_, idx) => idx === 0 ? "#e11d48" : "#0284c7");
+
+      renderChart("chartRegional", "bar", {
+        labels: regLabels,
+        datasets: [{ data: regVals, backgroundColor: regColors, borderRadius: 6, barPercentage: 0.65 }]
+      }, {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: "#f1f5f9" } }, x: { grid: { display: false } } }
+      });
+
+      // 2. Status de Execução (Donut)
+      const statMap = {};
+      filteredData.forEach(r => {
+        const st = r["Status Execução"] || "Não Definido";
+        statMap[st] = (statMap[st] || 0) + 1;
+      });
+      const statLabels = Object.keys(statMap);
+      const statVals = Object.values(statMap);
+      const statColorMap = {
+        "Concluída": "#10b981",
+        "Em andamento": "#f59e0b",
+        "Programada": "#06b6d4",
+        "Em Aprovação": "#3b82f6",
+        "Em Análise": "#6366f1",
+        "Cancelada": "#ef4444"
+      };
+      const statColors = statLabels.map(l => statColorMap[l] || "#94a3b8");
+
+      renderChart("chartStatus", "doughnut", {
+        labels: statLabels,
+        datasets: [{ data: statVals, backgroundColor: statColors, borderWidth: 2, borderColor: "#ffffff" }]
+      }, {
+        cutout: "62%",
+        plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } }
+      });
+
+      // 3. Volume por Projeto (Horizontal Bar)
+      const projMap = {};
+      filteredData.forEach(r => {
+        const p = r["Projeto"] || "Outros";
+        projMap[p] = (projMap[p] || 0) + 1;
+      });
+      const projSorted = Object.entries(projMap).sort((a, b) => b[1] - a[1]);
+
+      renderChart("chartProjeto", "bar", {
+        labels: projSorted.map(i => i[0]),
+        datasets: [{
+          data: projSorted.map(i => i[1]),
+          backgroundColor: projSorted.map((_, i) => i === 0 ? "#4f46e5" : "#818cf8"),
+          borderRadius: 6,
+          barPercentage: 0.6
+        }]
+      }, {
+        indexAxis: "y",
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, grid: { color: "#f1f5f9" } }, y: { grid: { display: false } } }
+      });
+
+      // 4. Cronograma: Data Criação x Data Execução
+      const dateCreatedMap = {};
+      const dateExecMap = {};
+      filteredData.forEach(r => {
+        const dc = (r["Data Criação"] || "").split(" ")[0];
+        if (dc && dc.includes("/")) dateCreatedMap[dc] = (dateCreatedMap[dc] || 0) + 1;
+
+        const de = (r["Data Execução"] || "").split(" ")[0];
+        if (de && de.includes("/")) dateExecMap[de] = (dateExecMap[de] || 0) + 1;
+      });
+
+      const allDates = [...new Set([...Object.keys(dateCreatedMap), ...Object.keys(dateExecMap)])].sort((a, b) => {
+        const [da, ma, ya] = a.split("/").map(Number);
+        const [db, mb, yb] = b.split("/").map(Number);
+        return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
+      });
+
+      renderChart("chartTimeline", "bar", {
+        labels: allDates,
+        datasets: [
+          {
+            label: "Demandas Criadas",
+            data: allDates.map(d => dateCreatedMap[d] || 0),
+            backgroundColor: "#0284c7",
+            borderRadius: 4
+          },
+          {
+            label: "Execuções Programadas",
+            data: allDates.map(d => dateExecMap[d] || 0),
+            backgroundColor: "#10b981",
+            borderRadius: 4
+          }
+        ]
+      }, {
+        plugins: { legend: { position: "top", labels: { boxWidth: 12, font: { size: 11 } } } },
+        scales: { y: { beginAtZero: true, grid: { color: "#f1f5f9" } }, x: { grid: { display: false } } }
+      });
+    }
+
+    function renderChart(canvasId, type, data, options) {
+      if (charts[canvasId]) charts[canvasId].destroy();
+      const ctx = document.getElementById(canvasId).getContext("2d");
+      charts[canvasId] = new Chart(ctx, {
+        type,
+        data,
+        options: { responsive: true, maintainAspectRatio: false, ...options }
+      });
+    }
+
+    // =========================================================================
+    // TABELA DETALHADA COM BOTÃO ROXO "⚡ Ação" (Imagem 3 e Imagem 5)
+    // =========================================================================
+    function renderTable() {
+      const tbody = document.getElementById("table-body");
+      document.getElementById("table-count").innerText = `Exibindo ${filteredData.length} registros`;
+
+      if (filteredData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Nenhum registro encontrado com os filtros atuais.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filteredData.map(row => {
+        const statusBadge = getStatusBadge(row["Status Execução"]);
+        const escLabel = getEscalonamentoLabel(row);
+        const repCount = parseInt(row["Reprogramação"]) || 0;
+        const escBadge = getEscalonamentoBadge(escLabel, repCount);
+
+        return `
+          <tr class="hover:bg-slate-50/90 transition">
+            <td class="py-3.5 px-4">
+              <div class="font-bold text-slate-800">${row["Projeto"]}</div>
+              <div class="text-[11px] text-slate-400">${row["Data Criação"] || "Sem data criação"}</div>
+            </td>
+            <td class="py-3.5 px-4 font-semibold text-slate-700">
+              ${row["Regional"] || "-"}
+            </td>
+            <td class="py-3.5 px-4">
+              <div class="font-bold text-slate-800">${row["Site"] || "Sem Site"}</div>
+              <div class="flex items-center gap-1.5 mt-0.5">
+                ${row["Número OS"] ? `<span class="text-[10px] font-semibold bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded border border-sky-200">OS: ${row["Número OS"]}</span>` : ""}
+                ${row["SGM"] ? `<span class="text-[10px] font-medium text-slate-500">SGM: ${row["SGM"]}</span>` : ""}
+              </div>
+            </td>
+            <td class="py-3.5 px-4">
+              <span class="font-semibold ${row["Data Execução"] ? "text-slate-800" : "text-slate-400 italic"}">
+                ${row["Data Execução"] || "Não programada"}
+              </span>
+            </td>
+            <td class="py-3.5 px-4">
+              ${statusBadge}
+              <div class="text-[10px] text-slate-400 mt-1 truncate max-w-[160px]" title="${row["Denominação Estado OS"] || ""}">
+                ${row["Denominação Estado OS"] || ""}
+              </div>
+            </td>
+            <td class="py-3.5 px-4">
+              <div class="text-[11px] text-slate-700"><span class="text-slate-400">SC:</span> <strong>${row["SC"] || "-"}</strong></div>
+              <div class="text-[11px] text-slate-700"><span class="text-slate-400">PC:</span> <strong>${row["PC"] || "-"}</strong></div>
+            </td>
+            <td class="py-3.5 px-4">
+              ${escBadge}
+            </td>
+            <td class="py-3.5 px-4 text-center">
+              <button onclick="openModal(${row._id})" class="inline-flex items-center gap-1.5 bg-[#6b00b6] hover:bg-[#52008c] text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-xs transition cursor-pointer">
+                <i data-lucide="zap" class="w-3.5 h-3.5 fill-current"></i> Ação
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      lucide.createIcons();
+    }
+
+    function getStatusBadge(status) {
+      const s = (status || "").toLowerCase();
+      if (s.includes("conclu")) return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ ${status}</span>`;
+      if (s.includes("andamento") || s.includes("programad")) return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">⏱ ${status}</span>`;
+      if (s.includes("aprova")) return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">● ${status}</span>`;
+      if (s.includes("cancelad")) return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">✕ ${status}</span>`;
+      return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">${status || "Pendente"}</span>`;
+    }
+
+    function getEscalonamentoBadge(esc, count) {
+      if (esc === "Gerente Divisão") {
+        return `<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-200">🚨 Gerente Divisão (${count}x)</span>`;
+      }
+      if (esc === "Gerente") {
+        return `<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200">⚠ Gerente (${count}x)</span>`;
+      }
+      if (esc === "Coordenador") {
+        return `<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">▲ Coordenador (${count}x)</span>`;
+      }
+      return `<span class="text-[11px] text-slate-400">Normal (0x)</span>`;
+    }
+
+    // =========================================================================
+    // MODAL DE VISUALIZAÇÃO E SALVAMENTO NO GOOGLE SHEETS
+    // =========================================================================
+    function openModal(id) {
+      const item = rawData.find(r => r._id === id);
+      if (!item) return;
+      currentEditingItem = item;
+
+      document.getElementById("modal-title").innerText = `${item["Projeto"]} • ${item["Site"] || "Site N/I"}`;
+      document.getElementById("modal-subtitle").innerText = `O.S. PRISMA: ${item["Número OS"] || "-"} • SGM: ${item["SGM"] || "-"}`;
+
+      document.getElementById("m-data-criacao").innerText = item["Data Criação"] || "-";
+      document.getElementById("m-regional").innerText = `${item["Regional"] || "-"} (${item["Unidade Negócio"] || "-"})`;
+      document.getElementById("m-estado-os").innerText = item["Denominação Estado OS"] || "-";
+      document.getElementById("m-valor").innerText = item["Valor Materiais Externos"] || "R$ 0,00";
+      document.getElementById("m-descricao").innerText = item["Descrição OS"] || "Sem descrição cadastrada.";
+
+      const repCount = parseInt(item["Reprogramação"]) || 0;
+      const escLabel = getEscalonamentoLabel(item);
+      document.getElementById("m-badge-reprog").innerText = `${repCount} Reprogramação(ões)`;
+      document.getElementById("m-badge-escalonamento").innerText = `Nível: ${escLabel}`;
+
+      // Preenche campos editáveis
+      document.getElementById("edit-data-execucao").value = item["Data Execução"] || "";
+      document.getElementById("edit-status-execucao").value = item["Status Execução"] || "";
+      document.getElementById("edit-sgm").value = item["SGM"] || "";
+      document.getElementById("edit-sc").value = item["SC"] || "";
+      document.getElementById("edit-pc").value = item["PC"] || "";
+      document.getElementById("edit-obs-reprog").value = item["Observação Reprogramação"] || "";
+      document.getElementById("edit-obs-geral").value = item["Observação Geral"] || "";
+
+      const fb = document.getElementById("save-feedback");
+      fb.classList.add("hidden");
+
+      const modal = document.getElementById("detailModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      const modal = document.getElementById("detailModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      currentEditingItem = null;
+    }
+
+    async function saveToGoogleSheets(e) {
+      e.preventDefault();
+      if (!currentEditingItem) return;
+
+      const fb = document.getElementById("save-feedback");
+      const btn = document.getElementById("btn-save");
+
+      if (APPS_SCRIPT_URL === "COLE_SUA_URL_DO_APPS_SCRIPT_AQUI") {
+        fb.className = "text-xs font-semibold p-3 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 block";
+        fb.innerText = "⚠️ Configure a URL do Google Apps Script na variável APPS_SCRIPT_URL dentro do código HTML antes de salvar.";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Salvando na planilha...`;
+      lucide.createIcons();
+
+      const payload = {
+        numeroOS: currentEditingItem["Número OS"],
+        projeto: currentEditingItem["Projeto"],
+        site: currentEditingItem["Site"],
+        dataExecucao: document.getElementById("edit-data-execucao").value.trim(),
+        statusExecucao: document.getElementById("edit-status-execucao").value,
+        sgm: document.getElementById("edit-sgm").value.trim(),
+        sc: document.getElementById("edit-sc").value.trim(),
+        pc: document.getElementById("edit-pc").value.trim(),
+        obsReprogramacao: document.getElementById("edit-obs-reprog").value.trim(),
+        obsGeral: document.getElementById("edit-obs-geral").value.trim()
+      };
+
+      try {
+        // Envia via text/plain para evitar bloqueio CORS preflight do Google Apps Script
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.status === "success") {
+          // Atualiza também localmente na tela imediatamente (o CSV publicado leva ~1-2 min para refletir no cache do Google)
+          currentEditingItem["Data Execução"] = payload.dataExecucao;
+          currentEditingItem["Status Execução"] = payload.statusExecucao;
+          currentEditingItem["SGM"] = payload.sgm;
+          currentEditingItem["SC"] = payload.sc;
+          currentEditingItem["PC"] = payload.pc;
+          currentEditingItem["Observação Reprogramação"] = payload.obsReprogramacao;
+          currentEditingItem["Observação Geral"] = payload.obsGeral;
+          if (result.reprogramacao > 0) {
+            currentEditingItem["Reprogramação"] = result.reprogramacao.toString();
+            currentEditingItem["Escalonamento"] = result.escalonamento;
+          }
+
+          document.getElementById("m-badge-reprog").innerText = `${result.reprogramacao} Reprogramação(ões)`;
+          document.getElementById("m-badge-escalonamento").innerText = `Nível: ${result.escalonamento || "Normal"}`;
+
+          fb.className = "text-xs font-semibold p-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 block";
+          fb.innerText = `✓ Salvo com sucesso na Planilha Google! Reprogramações: ${result.reprogramacao} | Escalonamento: ${result.escalonamento || "Normal"}.`;
+          
+          applyFilters();
+        } else {
+          throw new Error(result.message || "Erro desconhecido");
+        }
+      } catch (err) {
+        fb.className = "text-xs font-semibold p-3 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 block";
+        fb.innerText = `Erro ao salvar: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="save" class="w-3.5 h-3.5"></i> Salvar na Planilha Google`;
+        lucide.createIcons();
+      }
+    }
+
+    // Inicializa
+    window.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      loadData();
+    });
+  </script>
+</body>
+</html>
