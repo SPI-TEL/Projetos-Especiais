@@ -4,6 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Controle de Projetos Especiais • Gestão & Execução</title>
+
+  <script>
+    // 1. VALIDAÇÃO DE SESSÃO
+    const usuarioLogado = localStorage.getItem("usuario_logado");
+    const perfilUsuario = (localStorage.getItem("perfil_usuario") || "").trim();
+
+    // Se não houver usuário logado, bloqueia e redireciona para a tela de Login
+    if (!usuarioLogado) {
+      alert("Acesso restrito. Por favor, faça login no portal PLIN-SPI.");
+      window.location.replace("https://spi-tel.github.io/Login/");
+    }
+
+    // (Opcional) Exibir o nome do usuário no cabeçalho do portal de Projetos Especiais
+    window.addEventListener("DOMContentLoaded", () => {
+      const elNome = document.getElementById("nome-usuario-portal");
+      if (elNome && usuarioLogado) {
+        elNome.innerText = usuarioLogado;
+      }
+    });
+  </script>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
