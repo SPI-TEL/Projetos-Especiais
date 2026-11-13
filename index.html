@@ -9,8 +9,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- PapaParse para leitura precisa de CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <!-- Chart.js para gráficos -->
+  <!-- Chart.js e Plugin DataLabels -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -43,9 +44,9 @@
 </head>
 <body class="p-4 md:p-6 max-w-[1600px] mx-auto">
 
-  <!-- HEADER ESTILO PAINEL GERENCIAL (Padrão Imagem Enviada) -->
+  <!-- HEADER ESTILO PAINEL GERENCIAL -->
   <header class="bg-[#0b1324] text-white rounded-2xl px-5 py-4 mb-6 shadow-lg flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border border-slate-800">
-    <!-- Lado Esquerdo: Ícone + Título + Badge + Subtítulo -->
+    <!-- Lado Esquerdo -->
     <div class="flex items-center gap-4">
       <div class="bg-[#0ea5e9] text-white w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-sky-500/20">
         <i data-lucide="history" class="w-6 h-6"></i>
@@ -65,7 +66,7 @@
       </div>
     </div>
 
-    <!-- Lado Direito: Última Sincronização + Botões de Ação -->
+    <!-- Lado Direito -->
     <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-between xl:justify-end no-print">
       <div class="text-right mr-1">
         <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -77,17 +78,14 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2.5">
-        <!-- Botão Sincronizar -->
         <button onclick="loadData(true)" id="btn-sync" class="flex items-center gap-2 bg-[#109868] hover:bg-[#0d8259] text-white text-xs font-bold px-4 py-2.5 rounded-xl border border-white/80 shadow-sm transition cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4"></i> Sincronizar
         </button>
 
-        <!-- Botão Relatório / PDF -->
         <button onclick="window.print()" class="flex items-center gap-2 bg-[#1e293b] hover:bg-[#334155] text-slate-100 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer">
           <i data-lucide="printer" class="w-4 h-4"></i> Relatório / PDF
         </button>
 
-        <!-- Botão Exportar Base -->
         <button onclick="exportFilteredCSV()" class="flex items-center gap-2 bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition cursor-pointer">
           <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar Base
         </button>
@@ -162,16 +160,16 @@
       <p class="text-[11px] text-slate-400 mt-2">Aguardando liberação / SC / PC</p>
     </div>
 
-    <!-- Valor Materiais Externos -->
+    <!-- FAT-B -->
     <div class="bg-white rounded-xl p-4 border border-slate-200/80 card-shadow">
       <div class="flex justify-between items-start">
-        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">MATERIAIS EXTERNOS</span>
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">FAT-B</span>
         <i data-lucide="dollar-sign" class="w-4 h-4 text-indigo-500"></i>
       </div>
       <div class="flex items-baseline justify-between mt-3">
-        <span id="kpi-valor" class="text-xl xl:text-2xl font-extrabold text-indigo-600">R$ 0</span>
+        <span id="kpi-valor" class="text-lg xl:text-xl font-extrabold text-indigo-600 tracking-tight">R$ 0,00</span>
       </div>
-      <p class="text-[11px] text-slate-400 mt-2">Investimento total filtrado</p>
+      <p class="text-[11px] text-slate-400 mt-2">Valor total FAT-B filtrado</p>
     </div>
   </div>
 
@@ -237,7 +235,7 @@
         </div>
         <p class="text-[11px] text-slate-400 mt-0.5">Ordenado por volume • Destaque maior demanda</p>
       </div>
-      <div class="h-56 mt-4 relative">
+      <div class="h-60 mt-4 relative">
         <canvas id="chartRegional"></canvas>
       </div>
       <p class="text-[11px] text-center text-slate-400 mt-3 pt-2 border-t border-slate-100">Distribuição operacional por Regional</p>
@@ -252,10 +250,10 @@
         </div>
         <p class="text-[11px] text-slate-400 mt-0.5">Concluída, Em andamento, Aprovação e Análise</p>
       </div>
-      <div class="h-56 mt-4 relative flex items-center justify-center">
+      <div class="h-60 mt-4 relative flex items-center justify-center">
         <canvas id="chartStatus"></canvas>
       </div>
-      <p class="text-[11px] text-center text-slate-400 mt-3 pt-2 border-t border-slate-100">Distribuição percentual e absoluta</p>
+      <p class="text-[11px] text-center text-slate-400 mt-3 pt-2 border-t border-slate-100">Distribuição percentual por status</p>
     </div>
 
     <!-- Gráfico 3: Volume por Projeto -->
@@ -267,7 +265,7 @@
         </div>
         <p class="text-[11px] text-slate-400 mt-0.5">Ordenado por volume • Projetos ativos</p>
       </div>
-      <div class="h-56 mt-4 relative">
+      <div class="h-60 mt-4 relative">
         <canvas id="chartProjeto"></canvas>
       </div>
       <p class="text-[11px] text-center text-slate-400 mt-3 pt-2 border-t border-slate-100">Controle de frentes de trabalho</p>
@@ -282,7 +280,7 @@
         <p class="text-[11px] text-slate-400 mt-0.5">Acompanhamento temporal das OS abertas e datas agendadas</p>
       </div>
     </div>
-    <div class="h-60 relative">
+    <div class="h-64 relative">
       <canvas id="chartTimeline"></canvas>
     </div>
   </div>
@@ -361,8 +359,8 @@
             <span id="m-estado-os" class="text-xs font-bold text-slate-800 mt-0.5 block">-</span>
           </div>
           <div>
-            <span class="block text-[10px] font-bold uppercase text-slate-400">MAT. EXTERNOS</span>
-            <span id="m-valor" class="text-xs font-bold text-indigo-600 mt-0.5 block">-</span>
+            <span class="block text-[10px] font-bold uppercase text-slate-400">FAT-B</span>
+            <span id="m-valor" class="text-xs font-bold text-indigo-600 mt-0.5 block">R$ 0,00</span>
           </div>
           <div class="col-span-2 sm:col-span-4 pt-2 border-t border-slate-200/60">
             <span class="block text-[10px] font-bold uppercase text-slate-400">DESCRIÇÃO DA O.S.</span>
@@ -467,6 +465,11 @@
 
   <script>
     // =========================================================================
+    // REGISTRA PLUGIN DE RÓTULOS DE DADOS (CHARTJS-PLUGIN-DATALABELS)
+    // =========================================================================
+    Chart.register(ChartDataLabels);
+
+    // =========================================================================
     // CONFIGURAÇÕES DE CONEXÃO
     // =========================================================================
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZpB-IFO9NGB82VC7-Uql8LQxrgP8P5tM0AmICD10xVw98-PYxBCs5ud79XX-lQR9o-52dELFjsHIf/pub?gid=0&single=true&output=csv";
@@ -542,11 +545,9 @@
         return;
       }
 
-      // Remove o campo interno _id antes de exportar
       const exportRows = filteredData.map(({ _id, ...rest }) => rest);
       const csv = Papa.unparse(exportRows, { delimiter: ";" });
       
-      // Adiciona BOM UTF-8 (\uFEFF) para abrir acentos perfeitamente no Excel
       const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -623,7 +624,7 @@
     }
 
     // =========================================================================
-    // REGRAS DE NEGÓCIO (ESCALONAMENTO & VALORES)
+    // REGRAS DE NEGÓCIO (ESCALONAMENTO & FORMATAÇÃO DE MOEDA R$ 000.000,00)
     // =========================================================================
     function getEscalonamentoLabel(row) {
       const count = parseInt(row["Reprogramação"]) || 0;
@@ -636,9 +637,20 @@
 
     function parseCurrency(valStr) {
       if (!valStr) return 0;
-      const cleaned = valStr.replace(/[R$\s.]/g, "").replace(",", ".");
+      // Remove "R$", espaços e pontos de milhar, troca vírgula decimal por ponto
+      const cleaned = valStr.toString().replace(/[R$\s.]/g, "").replace(",", ".");
       const num = parseFloat(cleaned);
       return isNaN(num) ? 0 : num;
+    }
+
+    function formatBRL(value) {
+      const num = typeof value === "number" ? value : parseCurrency(value);
+      return num.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     }
 
     // =========================================================================
@@ -677,14 +689,16 @@
       document.getElementById("kpi-concluidas-pct").innerText = pct(concluidas);
       document.getElementById("kpi-aprovacao").innerText = aprovacao;
       document.getElementById("kpi-canceladas").innerText = `${canceladas} canc.`;
-      document.getElementById("kpi-valor").innerText = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+      document.getElementById("kpi-valor").innerText = formatBRL(valorTotal);
     }
 
     // =========================================================================
-    // GRÁFICOS (CHART.JS)
+    // GRÁFICOS COM RÓTULOS DE DADOS (QTD EXTREMIDADE EXTERNA + % BASE INTERNA)
     // =========================================================================
     function updateCharts() {
-      // 1. Por Regional
+      const totalFiltered = filteredData.length;
+
+      // 1. GRÁFICO POR REGIONAL
       const regMap = {};
       filteredData.forEach(r => {
         const reg = r["Regional"] || "N/I";
@@ -697,13 +711,43 @@
 
       renderChart("chartRegional", "bar", {
         labels: regLabels,
-        datasets: [{ data: regVals, backgroundColor: regColors, borderRadius: 6, barPercentage: 0.65 }]
+        datasets: [{ data: regVals, backgroundColor: regColors, borderRadius: 6, barPercentage: 0.68 }]
       }, {
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, grid: { color: "#f1f5f9" } }, x: { grid: { display: false } } }
+        layout: { padding: { top: 24 } },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            labels: {
+              qtd: {
+                anchor: "end",
+                align: "top",
+                offset: 2,
+                color: (ctx) => ctx.dataIndex === 0 ? "#e11d48" : "#0284c7",
+                font: { weight: "800", size: 11 },
+                formatter: (val) => val
+              },
+              pct: {
+                anchor: "start",
+                align: "end",
+                offset: 4,
+                color: "#ffffff",
+                font: { weight: "700", size: 9.5 },
+                formatter: (val) => {
+                  if (!totalFiltered || val === 0) return "";
+                  const p = ((val / totalFiltered) * 100).toFixed(1);
+                  return p >= 4 ? `${p}%` : "";
+                }
+              }
+            }
+          }
+        },
+        scales: {
+          y: { beginAtZero: true, display: false },
+          x: { grid: { display: false }, ticks: { font: { size: 10, weight: "600" }, color: "#475569" } }
+        }
       });
 
-      // 2. Status de Execução (Donut)
+      // 2. GRÁFICO STATUS DE EXECUÇÃO (Pizza/Rosca: SOMENTE %)
       const statMap = {};
       filteredData.forEach(r => {
         const st = r["Status Execução"] || "Não Definido";
@@ -725,11 +769,25 @@
         labels: statLabels,
         datasets: [{ data: statVals, backgroundColor: statColors, borderWidth: 2, borderColor: "#ffffff" }]
       }, {
-        cutout: "62%",
-        plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } }
+        cutout: "58%",
+        layout: { padding: { top: 10, bottom: 10, left: 16, right: 16 } },
+        plugins: {
+          legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10.5, weight: "600" }, padding: 12 } },
+          datalabels: {
+            color: "#ffffff",
+            font: { weight: "800", size: 11 },
+            textStrokeColor: "rgba(15, 23, 42, 0.35)",
+            textStrokeWidth: 2,
+            formatter: (val) => {
+              if (!totalFiltered || val === 0) return "";
+              const p = ((val / totalFiltered) * 100).toFixed(1);
+              return p >= 3 ? `${p}%` : "";
+            }
+          }
+        }
       });
 
-      // 3. Volume por Projeto (Horizontal Bar)
+      // 3. VOLUME POR PROJETO
       const projMap = {};
       filteredData.forEach(r => {
         const p = r["Projeto"] || "Outros";
@@ -741,17 +799,47 @@
         labels: projSorted.map(i => i[0]),
         datasets: [{
           data: projSorted.map(i => i[1]),
-          backgroundColor: projSorted.map((_, i) => i === 0 ? "#4f46e5" : "#818cf8"),
+          backgroundColor: projSorted.map((_, i) => i === 0 ? "#4f46e5" : "#6366f1"),
           borderRadius: 6,
-          barPercentage: 0.6
+          barPercentage: 0.68
         }]
       }, {
         indexAxis: "y",
-        plugins: { legend: { display: false } },
-        scales: { x: { beginAtZero: true, grid: { color: "#f1f5f9" } }, y: { grid: { display: false } } }
+        layout: { padding: { right: 38 } },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            labels: {
+              qtd: {
+                anchor: "end",
+                align: "right",
+                offset: 5,
+                color: "#4338ca",
+                font: { weight: "800", size: 11 },
+                formatter: (val) => val
+              },
+              pct: {
+                anchor: "start",
+                align: "right",
+                offset: 6,
+                color: "#ffffff",
+                font: { weight: "700", size: 9.5 },
+                formatter: (val) => {
+                  if (!totalFiltered || val === 0) return "";
+                  const p = ((val / totalFiltered) * 100).toFixed(1);
+                  return p >= 6 ? `${p}%` : "";
+                }
+              }
+            }
+          }
+        },
+        scales: {
+          x: { beginAtZero: true, display: false },
+          y: { grid: { display: false }, ticks: { font: { size: 10.5, weight: "600" }, color: "#334155" } }
+        }
       });
 
-      // 4. Cronograma: Data Criação x Data Execução
+      // 4. CRONOGRAMA
       const dateCreatedMap = {};
       const dateExecMap = {};
       filteredData.forEach(r => {
@@ -785,7 +873,18 @@
           }
         ]
       }, {
-        plugins: { legend: { position: "top", labels: { boxWidth: 12, font: { size: 11 } } } },
+        layout: { padding: { top: 20 } },
+        plugins: {
+          legend: { position: "top", labels: { boxWidth: 12, font: { size: 11, weight: "600" } } },
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            offset: 2,
+            color: "#334155",
+            font: { weight: "700", size: 10 },
+            formatter: (val) => val > 0 ? val : ""
+          }
+        },
         scales: { y: { beginAtZero: true, grid: { color: "#f1f5f9" } }, x: { grid: { display: false } } }
       });
     }
@@ -900,7 +999,7 @@
       document.getElementById("m-data-criacao").innerText = item["Data Criação"] || "-";
       document.getElementById("m-regional").innerText = `${item["Regional"] || "-"} (${item["Unidade Negócio"] || "-"})`;
       document.getElementById("m-estado-os").innerText = item["Denominação Estado OS"] || "-";
-      document.getElementById("m-valor").innerText = item["Valor Materiais Externos"] || "R$ 0,00";
+      document.getElementById("m-valor").innerText = formatBRL(item["Valor Materiais Externos"]);
       document.getElementById("m-descricao").innerText = item["Descrição OS"] || "Sem descrição cadastrada.";
 
       const repCount = parseInt(item["Reprogramação"]) || 0;
